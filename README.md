@@ -20,6 +20,74 @@ and 8 minutes. Each gap is measured from the previous call. It prints one JSON
 line per call with `usage.prompt_tokens_details.cached_tokens`. A full run takes
 about 16 minutes. Optional settings: `MODEL=@cf/...`, `GAPS_S=0,15,60,...`.
 
+## Run it as a Worker (binding path)
+
+[`worker/`](worker/) runs the same probe from inside a Worker through the
+Workers AI binding (`env.AI.run(model, body, { extraHeaders: {
+"x-session-affinity": ... } })`), with the same prompt and gaps. Because the
+run takes ~16 minutes, it's a Workflow: `step.sleep` for each idle gap, then one
+`step.do` per call (retries off, so a retry can't hide a cold prefill). No API
+token is needed.
+
+```sh
+cd worker && npm i && npx wrangler deploy
+URL=https://workers-ai-prefix-cache-repro.<subdomain>.workers.dev
+
+curl -X POST "$URL/probe"                       # defaults: deepseek-v4.1-flash, 0,15,60,120,240,480
+curl -X POST "$URL/probe?gaps=0,180,180,300"    # custom gaps / ?model=@cf/...
+curl "$URL/probe/<id>"                          # status + table once complete
+curl -X POST "$URL/once?affinity=my-session"    # one inline call, to poke the cache by hand
+```
+
+Each call is also logged as a JSON line (`npx wrangler tail`).
+
+### Think agent variant
+
+`POST /think?mode=...` runs the same probe through a real Think agent
+([`worker/src/agent.ts`](worker/src/agent.ts)). The agent uses `maxSteps = 1`
+and a growing conversation. Turns are fired with `saveMessages()` from
+`this.schedule()` alarms, so the DO is evicted between turns like a production
+agent. Each turn records cached tokens and time to first chunk.
+`GET /think/<name>` returns the table.
+
+`mode` controls how `getModel()` builds the model, which decides whether
+`x-session-affinity` is sent at all:
+
+| mode | `getModel()` returns | affinity header |
+|---|---|---|
+| `default` | `"@cf/..."` string (Think resolves it) | DO id (`this.sessionAffinity`) |
+| `createAI` | `createAI({ binding })(id, { sessionAffinity: this.sessionAffinity })` | DO id |
+| `none` | `createAI({ binding })(id)` (the getting-started pattern) | **none** |
+
+### Worker results (2026-10-26)
+
+Raw: [`worker/results-2026-10-26-binding.jsonl`](worker/results-2026-10-26-binding.jsonl),
+[`worker/results-2026-10-26-think.jsonl`](worker/results-2026-10-26-think.jsonl).
+
+**Run A (~20:24 UTC), binding Workflow: no expiry.** All calls hit 99.9% after
+4-, 8- and 10-minute idle gaps, including isolated single-gap runs (cold, then
+3, 5 or 10 min idle). Two fully cached calls still took 19-25 s.
+
+**Run B (~20:51 UTC), four runs in parallel: expiry reproduced at 8 min in all
+of them.**
+
+| Idle gap | Think `default` | Think `createAI` | Think `none` (no affinity) | Binding Workflow |
+|---|---|---|---|---|
+| cold | 0% | 0% | 0% | 0% |
+| 15 s - 4 min | 99.7-99.8% | 99.7-99.8% | 99.8-99.9% | 99.8% |
+| 8 min | **0%** (TTFC 5.4 s) | **16%** (6.7 s) | **8.5%** (5.4 s) | **34%** (3.4 s) |
+
+Takeaways:
+- Not Think-specific. The plain binding call loses the cache too.
+- Not a fixed TTL. A 10-minute gap kept the cache in run A. In run B, four
+  independent sessions lost theirs within the same 8-minute window
+  (20:59 to 21:07 UTC). That points to replica-wide eviction (load or memory
+  pressure), not a per-session timer.
+- Affinity made no measurable difference here. `none` hit the cache as often
+  as the DO-id affinity modes. But the getting-started `getModel()` pattern
+  (`createAI({ binding })(id)`) silently sends no affinity header, which is
+  worth documenting.
+
 ## Results (2026-10-26, `@cf/deepseek-ai/deepseek-v4.1-flash-1017`)
 
 Raw output: [`results-2026-10-26.jsonl`](results-2026-10-26.jsonl).

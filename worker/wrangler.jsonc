@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "workers-ai-prefix-cache-repro",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "ai": { "binding": "AI" },
+  "workflows": [
+    {
+      "name": "prefix-cache-probe",
+      "binding": "PROBE",
+      "class_name": "PrefixCacheProbe"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "ProbeAgent", "class_name": "ProbeAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProbeAgent"] }],
+  "vars": {
+    "DEFAULT_MODEL": "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
+    "DEFAULT_GAPS_S": "0,15,60,120,240,480"
+  }
+}
