@@ -1,0 +1,39 @@
+README.md
+  s_4ac5b2a12bc702::t_e83287be30ab50 23-90
+worker/.gitignore
+  s_4ac5b2a12bc702::t_64054bfc987437 1-3
+worker/package-lock.json
+  s_4ac5b2a12bc702::t_8471e4c622327b 1-6451
+worker/package.json
+  s_4ac5b2a12bc702::t_3938357f72349c 1-22
+worker/results-2026-10-26-binding.jsonl
+  s_4ac5b2a12bc702::t_621d2c6dd31f5f 1-12
+worker/results-2026-10-26-think.jsonl
+  s_4ac5b2a12bc702::t_db088150b7a1ab 1-24
+worker/src/agent.ts
+  s_4ac5b2a12bc702::t_879eb24f3b6569 1-188
+worker/src/index.ts
+  s_4ac5b2a12bc702::t_c9810229dfea70 1-203
+worker/src/prompt.ts
+  s_4ac5b2a12bc702::t_d97f471bf6f969 1-12
+worker/tsconfig.json
+  s_4ac5b2a12bc702::t_953e62eee51326 1-13
+worker/wrangler.jsonc
+  s_4ac5b2a12bc702::t_e20c8d19d14de2 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d09b6cbcea4a0d8e70e45ac6e357bf77a624be6e",
+  "prompts": {},
+  "sessions": {
+    "s_4ac5b2a12bc702": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a179d9-a9cb-7045-8d2e-5a6a9cb6fd7c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Harshil Agrawal <harshil@cloudflare.com>"
+    }
+  }
+}
